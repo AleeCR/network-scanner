@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escáner de Red</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Escáner de Puertos y Analizador de Red</h1>
+        <form id="scan-form">
+            <label for="ip">IP objetivo:</label>
+            <input type="text" id="ip" name="ip" placeholder="192.168.1.1" required>
+            <label for="port_start">Puerto inicial:</label>
+            <input type="number" id="port_start" name="port_start" value="1" min="1" max="65535" required>
+            <label for="port_end">Puerto final:</label>
+            <input type="number" id="port_end" name="port_end" value="100" min="1" max="65535" required>
+            <button type="submit">Escanear</button>
+        </form>
+        <div id="loading" class="loading hidden">Escaneando...</div>
+        <div id="error" class="error hidden"></div>
+        <div id="results" class="hidden">
+            <h2>Resultados</h2>
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>IP</th>
+                        <th>Puerto</th>
+                        <th>Estado</th>
+                        <th>Alerta</th>
+                    </tr>
+                </thead>
+                <tbody id="port-results"></tbody>
+            </table>
+            <h3>Dispositivos en la red</h3>
+            <table id="devices-table">
+                <thead>
+                    <tr>
+                        <th>IP</th>
+                        <th>MAC</th>
+                    </tr>
+                </thead>
+                <tbody id="device-results"></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        const form = document.getElementById("scan-form");
+        const loading = document.getElementById("loading");
+        const errorDiv = document.getElementById("error");
+        const resultsDiv = document.getElementById("results");
+        const portResults = document.getElementById("port-results");
+        const deviceResults = document.getElementById("device-results");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            loading.classList.remove("hidden");
+            errorDiv.classList.add("hidden");
+            resultsDiv.classList.add("hidden");
+            portResults.innerHTML = "";
+            deviceResults.innerHTML = "";
+
+            const formData = new FormData(form);
+            try {
+                const response = await fetch("/scan", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    errorDiv.textContent = data.error;
+                    errorDiv.classList.remove("hidden");
+                    return;
+                }
+
+                resultsDiv.classList.remove("hidden");
+                data.ports.forEach(port => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${data.target_ip}</td>
+                        <td>${port.port}</td>
+                        <td>${port.status}</td>
+                        <td>${data.alerts.filter(a => a.includes(port.port)).join(", ")}</td>
+                    `;
+                    portResults.appendChild(row);
+                });
+
+                data.devices.forEach(device => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${device.ip}</td>
+                        <td>${device.mac || "N/A"}</td>
+                    `;
+                    deviceResults.appendChild(row);
+                });
+            } catch (error) {
+                errorDiv.textContent = "Error en la solicitud: " + error.message;
+                errorDiv.classList.remove("hidden");
+            } finally {
+                loading.classList.add("hidden");
+            }
+        });
+    </script>
+</body>
+</html>
