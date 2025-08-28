@@ -1,4 +1,4 @@
-# Network Scanner and Analyzer 🌐🔍
+# Network Scanner y Analizador de red 🌐🔍
 
 ## Descripción 📝
 
